@@ -119,11 +119,69 @@ app.get('/auth/callback', async (req, res) => {
     console.log('💾 Session created:', sessionId);
     console.log('📊 Active sessions:', Object.keys(SESSIONS).length);
     
-    // Редиректим обратно в WebApp с sessionId
-    const redirectUrl = `${FRONTEND_URL}?sessionId=${sessionId}`;
-    console.log('📤 Redirecting to frontend:', redirectUrl);
+    // Проверяем, пришел ли запрос от Telegram WebApp
+    const userAgent = req.get('User-Agent') || '';
+    const referer = req.get('Referer') || '';
+    const isTelegramContext = userAgent.includes('TelegramBot') || 
+                             referer.includes('telegram') ||
+                             userAgent.includes('Telegram');
     
-    res.redirect(redirectUrl);
+    console.log('🔍 Request context:', { userAgent: userAgent.substring(0, 50), referer, isTelegramContext });
+    
+    if (isTelegramContext) {
+      // Для Telegram WebApp делаем редирект через tg:// схему
+      const telegramUrl = `tg://resolve?domain=your_bot&startapp=session_${sessionId}`;
+      console.log('📱 Redirecting to Telegram:', telegramUrl);
+      
+      // Показываем страницу с инструкциями и автоматическим редиректом
+      res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Authorization Complete</title>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; text-align: center; padding: 40px 20px; }
+            .container { max-width: 400px; margin: 0 auto; }
+            .success { color: #10b981; font-size: 48px; margin-bottom: 20px; }
+            .btn { background: #0088cc; color: white; padding: 15px 30px; border: none; border-radius: 8px; 
+                   font-size: 16px; text-decoration: none; display: inline-block; margin: 10px; cursor: pointer; }
+            .btn:hover { background: #006ba6; }
+            .session-id { font-family: monospace; background: #f3f4f6; padding: 10px; border-radius: 4px; word-break: break-all; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="success">✅</div>
+            <h2>Authorization Successful!</h2>
+            <p>Your Google Calendar is now connected.</p>
+            <p><strong>Session ID:</strong></p>
+            <div class="session-id">${sessionId}</div>
+            <p>Return to Telegram to access your calendar.</p>
+            <a href="${FRONTEND_URL}?sessionId=${sessionId}" class="btn">📱 Return to Calendar</a>
+            <br><br>
+            <button onclick="window.close()" class="btn" style="background: #6b7280;">Close Tab</button>
+            <script>
+              // Попробуем автоматически вернуться в Telegram через 3 секунды
+              setTimeout(() => {
+                try {
+                  window.location.href = '${telegramUrl}';
+                } catch(e) {
+                  console.log('Telegram redirect failed:', e);
+                }
+              }, 3000);
+            </script>
+          </div>
+        </body>
+        </html>
+      `);
+    } else {
+      // Для обычного браузера - стандартный редирект
+      const redirectUrl = `${FRONTEND_URL}?sessionId=${sessionId}`;
+      console.log('📤 Redirecting to frontend:', redirectUrl);
+      res.redirect(redirectUrl);
+    }
     
   } catch (error) {
     console.error('❌ Auth error:', error.message);
