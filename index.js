@@ -38,9 +38,10 @@ app.get('/', (req, res) => {
 
 // Начало авторизации Google
 app.get('/auth/google', (req, res) => {
-  console.log('🔄 Starting Google OAuth...');
+  const isTelegramRequest = req.query.telegram === 'true';
+  console.log('🔄 Starting Google OAuth...', { telegram: isTelegramRequest });
   
-  const state = uuidv4();
+  const state = uuidv4() + (isTelegramRequest ? '_telegram' : '');
   const params = new URLSearchParams({
     client_id: GOOGLE_CLIENT_ID,
     redirect_uri: GOOGLE_REDIRECT_URI,
@@ -59,11 +60,14 @@ app.get('/auth/google', (req, res) => {
 
 // Callback от Google
 app.get('/auth/callback', async (req, res) => {
-  const { code, error } = req.query;
+  const { code, error, state } = req.query;
+  
+  const isTelegramFlow = state && state.includes('_telegram');
   
   console.log('📥 Google callback received:', { 
     code: code ? 'received' : 'missing', 
-    error: error || 'none' 
+    error: error || 'none',
+    telegram: isTelegramFlow
   });
   
   if (error) {
@@ -119,16 +123,10 @@ app.get('/auth/callback', async (req, res) => {
     console.log('💾 Session created:', sessionId);
     console.log('📊 Active sessions:', Object.keys(SESSIONS).length);
     
-    // Проверяем, пришел ли запрос от Telegram WebApp
-    const userAgent = req.get('User-Agent') || '';
-    const referer = req.get('Referer') || '';
-    const isTelegramContext = userAgent.includes('TelegramBot') || 
-                             referer.includes('telegram') ||
-                             userAgent.includes('Telegram');
+    // Используем флаг из state для определения Telegram контекста
+    console.log('🔍 Request context:', { telegram: isTelegramFlow });
     
-    console.log('🔍 Request context:', { userAgent: userAgent.substring(0, 50), referer, isTelegramContext });
-    
-    if (isTelegramContext) {
+    if (isTelegramFlow) {
       // Для Telegram WebApp делаем редирект через tg:// схему
       const telegramUrl = `tg://resolve?domain=your_bot&startapp=session_${sessionId}`;
       console.log('📱 Redirecting to Telegram:', telegramUrl);
@@ -242,4 +240,4 @@ app.listen(port, () => {
   console.log(`🚀 Auth server running on port ${port}`);
   console.log(`📍 Available at: http://localhost:${port}`);
   console.log(`🔗 Google OAuth: http://localhost:${port}/auth/google`);
-}); 
+});
