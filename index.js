@@ -128,7 +128,7 @@ app.get('/auth/callback', async (req, res) => {
     
     if (isTelegramFlow) {
       // Для Telegram WebApp делаем редирект через tg:// схему
-      const telegramUrl = `tg://resolve?domain=your_bot&startapp=session_${sessionId}`;
+      const telegramUrl = `tg://resolve?domain=yourcalendarik_bot&startapp=session_${sessionId}`;
       console.log('📱 Redirecting to Telegram:', telegramUrl);
       
       // Показываем страницу с инструкциями и автоматическим редиректом
