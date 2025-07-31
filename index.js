@@ -157,19 +157,25 @@ app.get('/auth/callback', async (req, res) => {
             <p><strong>Session ID:</strong></p>
             <div class="session-id">${sessionId}</div>
             <p>Return to Telegram to access your calendar.</p>
-            <a href="${FRONTEND_URL}?sessionId=${sessionId}" class="btn">📱 Return to Calendar</a>
-            <br><br>
-            <button onclick="window.close()" class="btn" style="background: #6b7280;">Close Tab</button>
-            <script>
-              // Попробуем автоматически вернуться в Telegram через 3 секунды
-              setTimeout(() => {
-                try {
-                  window.location.href = '${telegramUrl}';
-                } catch(e) {
-                  console.log('Telegram redirect failed:', e);
-                }
-              }, 3000);
-            </script>
+                         <a href="${FRONTEND_URL}?sessionId=${sessionId}" class="btn">📱 Return to Calendar</a>
+             <br><br>
+             <button onclick="window.close()" class="btn" style="background: #6b7280;">Close Tab</button>
+             <script>
+               // Сохраняем session ID в localStorage для синхронизации
+               localStorage.setItem('telegram-session-id', '${sessionId}');
+               localStorage.setItem('telegram-auth-completed', Date.now().toString());
+               
+               console.log('💾 Saved session ID for Telegram:', '${sessionId}');
+               
+               // Попробуем автоматически вернуться в Telegram через 3 секунды
+               setTimeout(() => {
+                 try {
+                   window.location.href = '${telegramUrl}';
+                 } catch(e) {
+                   console.log('Telegram redirect failed:', e);
+                 }
+               }, 3000);
+             </script>
           </div>
         </body>
         </html>
